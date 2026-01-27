@@ -1,10 +1,9 @@
 package com.tin.user.models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.List;
 
 @Entity
 @Data
@@ -16,4 +15,7 @@ public class User {
     private String username;
     private String email;
     private String password;
+
+//    @OneToMany(cascade = CascadeType.ALL,  fetch = FetchType.EAGER)
+//    private List<Session> sessions;
 }

@@ -4,16 +4,25 @@ import com.tin.user.dto.CreateUserDto;
 import com.tin.user.dto.UserResponseDto;
 import com.tin.user.models.User;
 import com.tin.user.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
 
+@Service
 public class AuthImpl implements AuthenticationService {
 
     private UserRepository userRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
+    private TokenGenerator tokenGenerator;
 
-    public AuthImpl(UserRepository userRepository) {
+    public AuthImpl(UserRepository userRepository,
+                    BCryptPasswordEncoder bCryptPasswordEncoder,
+
+                    TokenGenerator tokenGenerator) {
         this.userRepository = userRepository;
-        this.bCryptPasswordEncoder = new BCryptPasswordEncoder();
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
+
+        this.tokenGenerator = tokenGenerator;
     }
 
     @Override
@@ -27,7 +36,8 @@ public class AuthImpl implements AuthenticationService {
     }
 
     @Override
-    public UserResponseDto signup(CreateUserDto createUserDto) throws Exception {
+    @Transactional
+    public String signup(CreateUserDto createUserDto) throws Exception {
         if (this.userRepository.existsByEmail(createUserDto.getEmail())) {
             throw new Exception("user already exists");
         }
@@ -37,7 +47,11 @@ public class AuthImpl implements AuthenticationService {
         user.setPassword(hashedPass);
         user.setUsername(createUserDto.getUsername());
         userRepository.save(user);
-        return convert(user);
+//
+//        Session session = new Session();
+//        session.setToken(tokenGenerator.generate());
+        String token = tokenGenerator.generate();
+        return token;
     }
 
     UserResponseDto convert(User user) {

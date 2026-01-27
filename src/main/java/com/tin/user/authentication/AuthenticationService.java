@@ -4,6 +4,6 @@ import com.tin.user.dto.CreateUserDto;
 import com.tin.user.dto.UserResponseDto;
 
 public interface AuthenticationService {
-    UserResponseDto signup(CreateUserDto createUserDto) throws Exception;
+    String signup(CreateUserDto createUserDto) throws Exception;
     UserResponseDto login(String email, String password) throws Exception;
 }
