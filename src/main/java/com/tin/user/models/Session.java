@@ -1,19 +1,19 @@
-//package com.tin.user.models;
-//
-//import jakarta.persistence.Entity;
-//import jakarta.persistence.Id;
-//import lombok.Data;
-//
-//import java.time.Instant;
-//import java.util.Date;
-//
-//@Entity
-//@Data
-//public class Session {
-//    @Id
-//    private Long id;
-//    private String token;
-//    private User user;
-//    private Instant creationDate;
-//    private Instant expirationDate;
-//}
+package com.tin.user.models;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.ManyToOne;
+import lombok.Data;
+
+
+@Entity
+@Data
+public class Session extends BaseModel{
+
+    private String token;
+    @ManyToOne
+    private User user;
+    @Enumerated(EnumType.ORDINAL)
+    private SessionStatus status;
+}
