@@ -8,13 +8,20 @@ import com.tin.user.models.SessionStatus;
 import com.tin.user.models.User;
 import com.tin.user.repository.SessionRepository;
 import com.tin.user.repository.UserRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.MacAlgorithm;
 import jakarta.transaction.Transactional;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Optional;
 
@@ -49,17 +56,51 @@ public class AuthenticationService {
         if (!bCryptPasswordEncoder.matches(loginUserDto.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid credentials");
         }
-        String token = tokenGenerator.generate();
+
+
+        // Create a test key suitable for the desired HMAC-SHA algorithm:
+        MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS256
+        SecretKey key = alg.key().build();
+
+        String message = "{\n" +
+                "  \"username\": \"John Doe\",\n" +
+                "  \"email\": \"John@mail.com\",\n"  +
+                "}";
+        byte[] content = message.getBytes(StandardCharsets.UTF_8);
+
+// Create the compact JWS:
+        String jws = Jwts.builder().content(content, "text/plain").signWith(key, alg).compact();
+
+// Parse the compact JWS:
+//        content = Jwts.parser().verifyWith(key).build().parseSignedContent(jws).getPayload();
+
+
+//        String token = tokenGenerator.generate();
         Session session = new Session();
-        session.setToken(token);
+        session.setToken(jws);
         session.setUser(user);
         session.setStatus(SessionStatus.ACTIVE);
         sessionRepository.save(session);
 
+//        MultiValueMapAdapter<String, String> headers = new MultiValueMapAdapter<>(new HashMap<>());
+//        headers.add(HttpHeaders.SET_COOKIE, "auth-token:" + jws);
+
+//        ResponseEntity<User> response = new ResponseEntity<>(user, headers, HttpStatus.OK);
         return convert(user);
+//        ResponseCookie cookie = ResponseCookie.from("auth-token", jws)
+//                .httpOnly(true)          // JS cannot access (prevents XSS)
+//                .secure(true)            // HTTPS only (set false for local testing)
+//                .path("/")               // available to all endpoints
+//                .maxAge(Duration.ofDays(7))
+//                .sameSite("Strict")      // or "Lax"
+//                .build();
+
+//        return ResponseEntity.ok()
+//                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+//                .build();
     }
 
-    @Transactional
+//    @Transactional
     public String signup(CreateUserDto createUserDto) throws Exception {
         if (this.userRepository.existsByEmail(createUserDto.getEmail())) {
             throw new Exception("user already exists");
@@ -79,7 +120,7 @@ public class AuthenticationService {
         sessionRepository.save(session);
 
         MultiValueMapAdapter<String, String> headers = new MultiValueMapAdapter<>(new HashMap<>());
-        headers.add(HttpHeaders.SET_COOKIE, "auth-token:" + token);
+        headers.add(HttpHeaders.SET_COOKIE, "auth-token=" + token);
 
         return token;
     }
@@ -101,6 +142,5 @@ public class AuthenticationService {
         userResponseDto.setEmail(user.getEmail());
         return userResponseDto;
     }
-
 
 }
