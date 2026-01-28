@@ -11,7 +11,8 @@ public class SpringSecurity {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http.cors().disable();
+        http.cors(cors-> cors.disable());
+        http.csrf(csrf -> csrf.disable());
         http.authorizeHttpRequests(
                 authorizeRequests ->
                 authorizeRequests.anyRequest().permitAll());

@@ -9,10 +9,13 @@ import com.tin.user.models.User;
 import com.tin.user.repository.SessionRepository;
 import com.tin.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMapAdapter;
 
+import java.util.HashMap;
 import java.util.Optional;
 
 @Service
@@ -74,6 +77,9 @@ public class AuthenticationService {
         session.setUser(user);
         session.setStatus(SessionStatus.ACTIVE);
         sessionRepository.save(session);
+
+        MultiValueMapAdapter<String, String> headers = new MultiValueMapAdapter<>(new HashMap<>());
+        headers.add(HttpHeaders.SET_COOKIE, "auth-token:" + token);
 
         return token;
     }
