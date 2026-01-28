@@ -23,6 +23,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -62,14 +63,21 @@ public class AuthenticationService {
         MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS256
         SecretKey key = alg.key().build();
 
-        String message = "{\n" +
-                "  \"username\": \"John Doe\",\n" +
-                "  \"email\": \"John@mail.com\",\n"  +
-                "}";
-        byte[] content = message.getBytes(StandardCharsets.UTF_8);
+//        String message = "{\n" +
+//                "  \"username\": \"John Doe\",\n" +
+//                "  \"email\": \"John@mail.com\",\n"  +
+//                "}";
+//        byte[] content = message.getBytes(StandardCharsets.UTF_8);
+
+        Map<String, Object> jsonForJwt = new HashMap<>();
+        jsonForJwt.put("username", user.getUsername());
+        jsonForJwt.put("email", user.getEmail());
 
 // Create the compact JWS:
-        String jws = Jwts.builder().content(content, "text/plain").signWith(key, alg).compact();
+        String jws = Jwts.builder()
+                .claims(jsonForJwt)
+                .signWith(key, alg)
+                .compact();
 
 // Parse the compact JWS:
 //        content = Jwts.parser().verifyWith(key).build().parseSignedContent(jws).getPayload();
@@ -141,6 +149,15 @@ public class AuthenticationService {
         userResponseDto.setName(user.getUsername());
         userResponseDto.setEmail(user.getEmail());
         return userResponseDto;
+    }
+
+    public SessionStatus validateToken(String token, Long userId) {
+        Optional<Session> session = this.sessionRepository.findByTokenAndUserId(token, userId);
+        if (session.isEmpty()) {
+            return SessionStatus.INACTIVE;
+        }
+
+        return SessionStatus.ACTIVE;
     }
 
 }
