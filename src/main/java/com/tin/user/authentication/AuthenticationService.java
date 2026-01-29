@@ -8,6 +8,8 @@ import com.tin.user.models.SessionStatus;
 import com.tin.user.models.User;
 import com.tin.user.repository.SessionRepository;
 import com.tin.user.repository.UserRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import jakarta.transaction.Transactional;
@@ -20,8 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMapAdapter;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -152,10 +152,32 @@ public class AuthenticationService {
     }
 
     public SessionStatus validateToken(String token, Long userId) {
-        Optional<Session> session = this.sessionRepository.findByTokenAndUserId(token, userId);
-        if (session.isEmpty()) {
+        Optional<Session> optionalSession= this.sessionRepository.findByTokenAndUserId(token, userId);
+        if (optionalSession.isEmpty()) {
             return SessionStatus.INACTIVE;
         }
+        Session session = optionalSession.get();
+
+        if (!session.getStatus().equals(SessionStatus.ACTIVE)) {
+            return SessionStatus.INACTIVE;
+        }
+
+        Jws<Claims> jwtClaims = Jwts
+                .parser()
+                .build()
+                .parseSignedClaims(token);
+
+        String email =  jwtClaims
+                .getPayload()
+                .get("email")
+                .toString();
+
+        String name =  jwtClaims
+                .getPayload()
+                .get("username")
+                .toString();
+
+
 
         return SessionStatus.ACTIVE;
     }
