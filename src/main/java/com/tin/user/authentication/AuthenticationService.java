@@ -10,6 +10,7 @@ import com.tin.user.repository.SessionRepository;
 import com.tin.user.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import jakarta.transaction.Transactional;
@@ -32,18 +33,20 @@ public class AuthenticationService {
     private UserRepository userRepository;
     private BCryptPasswordEncoder bCryptPasswordEncoder;
     private TokenGenerator tokenGenerator;
-    private final SessionRepository sessionRepository;
+    private SessionRepository sessionRepository;
+    private JwtService jwtService;
 
     public AuthenticationService(UserRepository userRepository,
                                  BCryptPasswordEncoder bCryptPasswordEncoder,
-
                                  TokenGenerator tokenGenerator,
-                                 SessionRepository sessionRepository) {
+                                 SessionRepository sessionRepository,
+                                 JwtService jwtService) {
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
 
         this.tokenGenerator = tokenGenerator;
         this.sessionRepository = sessionRepository;
+        this.jwtService = jwtService;
     }
 
     public UserResponseDto login(LoginUserDto loginUserDto) throws Exception {
@@ -60,8 +63,8 @@ public class AuthenticationService {
 
 
         // Create a test key suitable for the desired HMAC-SHA algorithm:
-        MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS256
-        SecretKey key = alg.key().build();
+//        MacAlgorithm alg = Jwts.SIG.HS256; //or HS384 or HS256
+//        SecretKey key = alg.key().build();
 
 //        String message = "{\n" +
 //                "  \"username\": \"John Doe\",\n" +
@@ -69,15 +72,15 @@ public class AuthenticationService {
 //                "}";
 //        byte[] content = message.getBytes(StandardCharsets.UTF_8);
 
-        Map<String, Object> jsonForJwt = new HashMap<>();
-        jsonForJwt.put("username", user.getUsername());
-        jsonForJwt.put("email", user.getEmail());
+//        Map<String, Object> jsonForJwt = new HashMap<>();
+//        jsonForJwt.put("username", user.getUsername());
+//        jsonForJwt.put("email", user.getEmail());
 
 // Create the compact JWS:
-        String jws = Jwts.builder()
-                .claims(jsonForJwt)
-                .signWith(key, alg)
-                .compact();
+//        String jws = Jwts.builder()
+//                .claims(jsonForJwt)
+//                .signWith(key, alg)
+//                .compact();
 
 // Parse the compact JWS:
 //        content = Jwts.parser().verifyWith(key).build().parseSignedContent(jws).getPayload();
@@ -85,7 +88,9 @@ public class AuthenticationService {
 
 //        String token = tokenGenerator.generate();
         Session session = new Session();
-        session.setToken(jws);
+        String token = jwtService.generateToken(user);
+//        session.setToken(jws);
+        session.setToken(token);
         session.setUser(user);
         session.setStatus(SessionStatus.ACTIVE);
         sessionRepository.save(session);
@@ -121,7 +126,7 @@ public class AuthenticationService {
         userRepository.save(user);
 //
         Session session = new Session();
-        String token = tokenGenerator.generate();
+        String token = jwtService.generateToken(user);
         session.setToken(token);
         session.setUser(user);
         session.setStatus(SessionStatus.ACTIVE);
@@ -162,24 +167,37 @@ public class AuthenticationService {
             return SessionStatus.INACTIVE;
         }
 
-        Jws<Claims> jwtClaims = Jwts
-                .parser()
-                .build()
-                .parseSignedClaims(token);
+        try {
+            Claims claims = jwtService.validateAndExtractClaims(token);
 
-        String email =  jwtClaims
-                .getPayload()
-                .get("email")
-                .toString();
+            Long tokenUserId = claims.get("userId", Long.class);
 
-        String name =  jwtClaims
-                .getPayload()
-                .get("username")
-                .toString();
+            if (!tokenUserId.equals(userId)) {
+                return SessionStatus.INACTIVE;
+            }
 
+            return SessionStatus.ACTIVE;
 
+        } catch (JwtException e) {
+            // signature invalid / expired / malformed
+            return SessionStatus.INACTIVE;
+        }
 
-        return SessionStatus.ACTIVE;
+//        Jws<Claims> jwtClaims = Jwts
+//                .parser()
+//                .build()
+//                .parseSignedClaims(token);
+//
+//        String email =  jwtClaims
+//                .getPayload()
+//                .get("email")
+//                .toString();
+//
+//        String name =  jwtClaims
+//                .getPayload()
+//                .get("username")
+//                .toString();
+
     }
 
 }
